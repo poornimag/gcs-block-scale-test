@@ -88,48 +88,49 @@ Once the vagrant up succesfully completes, login to the kubernetes master(kube1)
   $ kuectl get pods -ngcs
   ```
 
-##### Deploy gluster loopback CSI driver:
-There is an unsolved issue with gluster loopback driver, that the csi containers fail to create loop devices if it already doesn’t exist. Hence the following workaround:
-
-Ssh to all kube systems kube{1..3} and execute the following:
-for i in {1..3000} ; do touch /tmp/abcd$i ;  losetup --find --show /tmp/abcd$i ; done ; losetup -D ; rm -f /tmp/abc*
-
-Copy the below files to kube1(master node):
-https://github.com/gluster/gluster-csi-driver/pull/105/files#diff-6b90f49172d8a10e75aa23917602ad23      ⇒ csi-deployment.yaml
-https://github.com/gluster/gluster-csi-driver/pull/105/files#diff-145bdc1c1d484621d4ed29e4bb64b32d     ⇒ storage-class.yaml
-
-kubectl create -f csi-deployment.yaml -ngcs
-kubectl get pods -ngcs
-NAME                                      READY   STATUS    RESTARTS   AGE
-csi-attacher-glusterblockplugin-0         2/2     Running   0          69m
-csi-attacher-glusterfsplugin-0            2/2     Running   0          94m
-csi-nodeplugin-glusterblockplugin-5qglz   2/2     Running   0          69m
-csi-nodeplugin-glusterblockplugin-hh5d6   2/2     Running   0          69m
-csi-nodeplugin-glusterblockplugin-lrd4c   2/2     Running   0          69m
-csi-nodeplugin-glusterfsplugin-8f5kh      2/2     Running   0          94m
-csi-nodeplugin-glusterfsplugin-cg2f9      2/2     Running   1          94m
-csi-nodeplugin-glusterfsplugin-gx2nb      2/2     Running   0          94m
-csi-provisioner-glusterblockplugin-0      2/2     Running   0          69m
-csi-provisioner-glusterfsplugin-0         3/3     Running   0          94m
-etcd-85ps2f9lxl                           1/1     Running   0          99m
-etcd-dmhrjmxmpj                           1/1     Running   0          100m
-etcd-operator-7cb5bd459b-pctwz            1/1     Running   0          101m
-etcd-w7lm7vthnz                           1/1     Running   0          101m
-gluster-kube1-0                           1/1     Running   1          99m
-gluster-kube2-0                           1/1     Running   1          99m
-gluster-kube3-0                           1/1     Running   1          99m
+##### Deploy gluster loopback CSI driver
+There is an known issue with gluster loopback driver, that the csi containers fail to create loop devices if it doesn’t exist. To workaround this, ssh to all kube systems kube{1..3} and execute the following
+  ```
+  for i in {1..3000} ; do touch /tmp/abcd$i ;  losetup --find --show /tmp/abcd$i ; done ; losetup -D ; rm -f /tmp/abc*
+  ```
+Copy the file csi-deployment.yaml and storage-class.yaml from this repo to kube1. Deploy csi glusterblock plugins:
+  ```
+  $ kubectl create -f csi-deployment.yaml -ngcs
+  $ kubectl get pods -ngcs
+    NAME                                      READY   STATUS    RESTARTS   AGE
+    csi-attacher-glusterblockplugin-0         2/2     Running   0          69m
+    csi-attacher-glusterfsplugin-0            2/2     Running   0          94m
+    csi-nodeplugin-glusterblockplugin-5qglz   2/2     Running   0          69m
+    csi-nodeplugin-glusterblockplugin-hh5d6   2/2     Running   0          69m
+    csi-nodeplugin-glusterblockplugin-lrd4c   2/2     Running   0          69m
+    csi-nodeplugin-glusterfsplugin-8f5kh      2/2     Running   0          94m
+    csi-nodeplugin-glusterfsplugin-cg2f9      2/2     Running   1          94m
+    csi-nodeplugin-glusterfsplugin-gx2nb      2/2     Running   0          94m
+    csi-provisioner-glusterblockplugin-0      2/2     Running   0          69m
+    csi-provisioner-glusterfsplugin-0         3/3     Running   0          94m
+    etcd-85ps2f9lxl                           1/1     Running   0          99m
+    etcd-dmhrjmxmpj                           1/1     Running   0          100m
+    etcd-operator-7cb5bd459b-pctwz            1/1     Running   0          101m
+    etcd-w7lm7vthnz                           1/1     Running   0          101m
+    gluster-kube1-0                           1/1     Running   1          99m
+    gluster-kube2-0                           1/1     Running   1          99m
+    gluster-kube3-0                           1/1     Running   1          99m
+  ```
 
 Wait for the glusterblock csi containers to goto the Running state. Then create the storage class:
-kubectl create -f storage-class.yaml
+  ```
+  $ kubectl create -f storage-class.yaml
+  #Unset glusterfs-csi storage class as not default(this step may be unnecessary):
+  $ kubectl patch storageclass glusterfs-csi -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+  ```
 
-Unset glusterfs-csi storage class as not default(this step may be unnecessary):
+The setup is complete, gluster block storage, based on loopback is ready to be consumed by the applications.
+Copy the file app.yaml from this repo to the kube1, and execute the below command to create a sample app to use the gluster block storage:
+  ```
+  $ kubectl create -f app.yaml 
+  $ kubectl get pods # Should show the pod in running state
+  $ kubectl get pvc # Should show the pvc in BOUND state
+  ```
+##### Scale testing
 
-kubectl patch storageclass glusterfs-csi -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
-
-The setup is complete, gluster block storage based on loopback is ready to be consumed by the applications.
-Create the app using the gluster block storage:
-Kubectl create -f app.yaml 
-
-Kubectl get pods # Should show the pod in running state
-Kubectl get pvc # Should show the pvc in BOUND state
-
+To deply lots of apps and claim large number of pvcs, use the python script gen_app_pv_yaml.py to generate a yaml file large number of apps and pvc.
