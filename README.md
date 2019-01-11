@@ -1,9 +1,13 @@
-# gcs-loopback
+# gcs-block-scale-test
 Test steps and results of using loopback as gluster block
 
-We use gcs project to create vms in the hypervisor. These VMs will be the kubernetes cluster nodes and also gluster cluster nodes.
 
-## Setup Hypervisor
+##### Gluster Container block storage, scale test result
+We use gcs project to create vms in a hypervisor. These VMs will be the kubernetes cluster nodes and also gluster cluster nodes. We followed the steps mentioned in the document to perform scale test. The results of the scale test can be found in the [spreadsheet] (https://docs.google.com/spreadsheets/d/1-bzyiW_c3Ge3QB8aSAQWX-Sq6l48apY6rsdR6sojxTQ/edit?usp=sharing)
+
+As a summary, the largest scale we tested was with 280 pods, each claiming 12 PVC (total 3360 PVC). But we believe it can be scaled even higher, if we had more resources. The pods are lesser in number, due to the max default limit imposed by kubernetes (100 pods per node). We had tried approx 10000 PVC, that went to BOUND state, but these were not claimed in app, hence not mounted in the container. There may be problems wrt performance if we were to scale more than 10000,  we are yet to discover the same.
+
+#### Steps to setup test cluster
 
 ##### Hypervisor specs
 OS: Centos 7.6  
@@ -60,9 +64,9 @@ Create a symlink in the deafult libvirt directory, so that the Vagrantfile can u
   $ systemctl start libvirtd
   ```
   
- ##### Clone the GCS cluster
+ ##### Create the GCS cluster
  
- Create the gcs repo
+ Clone the gcs repo
  
   ``` 
   $ git clone https://github.com/gluster/gcs.git  
@@ -131,6 +135,15 @@ Copy the file app.yaml from this repo to the kube1, and execute the below comman
   $ kubectl get pods # Should show the pod in running state
   $ kubectl get pvc # Should show the pvc in BOUND state
   ```
-##### Scale testing
-
-To deply lots of apps and claim large number of pvcs, use the python script gen_app_pv_yaml.py to generate a yaml file large number of apps and pvc.
+To perform scale test, 280 pods and 3360 PVCs, download the 280pod-3360pvc.yaml from this repo to kube1 and deploy as below:
+  ```
+  $ kubectl create -f 280pod-3360pvc.yaml
+  $ kubectl get pods # Should show the pods in running state
+  $ kubectl get pvc # Should show the pvcs in BOUND state
+  $ kubectl get pods -o json > results-280pod-3360pvc.out
+  # To get the sorted list of time at which each pod was created, run the following
+  $ grep -A 2 "lastTransitionTime" ../../results-280pod-3360pvc.out | grep -B 3 -F "\"Ready\"" | grep "lastTransitionTime" | awk {'print $2'} | sed 's/..$//g' | sed 's/"//g' | sed 's/.$//g' | sort 
+  # plot this data against the number of pods to see the create time graph.
+  
+  ```
+To deploy different number of apps and PVCs, use the python script gen_app_pv_yaml.py to generate a yaml file with custom number of apps and pvcs.
