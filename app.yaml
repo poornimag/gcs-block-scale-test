@@ -1,0 +1,31 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: glusterblock-0
+spec:
+  storageClassName: glusterblock-csi
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gluster-0
+  labels:
+    app: smallfile
+spec:
+  containers:
+  - name: smallfile
+    image: quay.io/ekuric/smallfile:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/gluster"
+      name: glustercsivol
+  volumes:
+  - name: glustercsivol
+    persistentVolumeClaim:
+      claimName: glusterblock-0
