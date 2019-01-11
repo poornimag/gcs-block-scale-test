@@ -2,8 +2,8 @@
 Test steps and results of using loopback as gluster block
 
 
-##### Gluster Container block storage, scale test result
-We use gcs project to create vms in a hypervisor. These VMs will be the kubernetes cluster nodes and also gluster cluster nodes. We followed the steps mentioned in the document to perform scale test. The results of the scale test can be found in the [spreadsheet] (https://docs.google.com/spreadsheets/d/1-bzyiW_c3Ge3QB8aSAQWX-Sq6l48apY6rsdR6sojxTQ/edit?usp=sharing)
+### Gluster Container block storage, scale test result
+We use gcs project to create vms in a hypervisor. These VMs will be the kubernetes cluster nodes and also gluster cluster nodes. We followed the steps mentioned in the document to perform scale test. The results of the scale test can be found in the [spreadsheet](https://docs.google.com/spreadsheets/d/1-bzyiW_c3Ge3QB8aSAQWX-Sq6l48apY6rsdR6sojxTQ/edit?usp=sharing)
 
 As a summary, the largest scale we tested was with 280 pods, each claiming 12 PVC (total 3360 PVC). But we believe it can be scaled even higher, if we had more resources. The pods are lesser in number, due to the max default limit imposed by kubernetes (100 pods per node). We had tried approx 10000 PVC, that went to BOUND state, but these were not claimed in app, hence not mounted in the container. There may be problems wrt performance if we were to scale more than 10000,  we are yet to discover the same.
 
