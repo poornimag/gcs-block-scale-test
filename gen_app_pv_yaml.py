@@ -48,11 +48,11 @@ with open(file, 'w') as f:
         f.write(APP_HEADER1)
         f.write('  name: gluster-%d\n' % i)
         f.write(APP_HEADER2)
-        for k in range(1,13):
+        for k in range(1,PVC_PER_APP):
             f.write('    - name: glustercsivol-%d\n' % k)
             f.write('      mountPath: "/mnt/gluster-%d"\n' % k)
         f.write(APP_HEADER3)
-        for l in range(1,13): 
+        for l in range(1,PVC_PER_APP): 
             f.write('  - name: glustercsivol-%d\n' % l)
             f.write('    persistentVolumeClaim:\n')
             f.write('      claimName: glusterblock-%d\n' % pvc_claim)
